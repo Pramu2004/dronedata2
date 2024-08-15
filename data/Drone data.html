@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flight Data</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <style>
+        body {
+            background-color: #000000; 
+            background-size: cover; 
+            background-position: center; 
+            background-repeat: no-repeat; 
+        }
+    </style>
+
+    <div class="data" style="display: flex; align-items: center;">
+        <h1 style="margin-left: 0px;">
+            <img src="logo.png" alt="Flight Data" width="60" height="60" style="vertical-align: middle;">
+            Flight
+        </h1>
+        <h2>Data</h2>
+    </div> 
+    
+    <div class="camera-feed">
+        <h4><img src="Background.jpg" alt="background">Camera Feed</h4>
+    </div>
+
+    <div class="parent-container">
+        <div class="data-container">
+            <div class="drone-details">
+                <h2 style="margin-right: 0px; margin-top: -10%; margin-bottom: 0%;">
+                   <img src="Drone.png" alt="Drone type" width="150" height="160" style="vertical-align: middle;">
+                   AG Drone
+                </h2>
+                <p class="onlinestatus" id="onlinestatus">OFFLINE</p>
+            </div>
+
+            <div class="battery-container">
+                <div class="battery">
+                    <h6>Battery Status</h6>
+                    <div class="battery-level" id="battery-level"></div>
+                    <div class="battery-tip"></div>
+                    <p class="battery-status" id="battery-status">Loading...</p>
+                </div>
+            </div>
+
+            <div class="data-item">
+                <div class="sensor">
+                    <h2 style="margin-left: 0px;">
+                        <img src="temperature.png" alt="temp icon" width="25" height="25" style="vertical-align: middle;">
+                        Temperature</h2>
+                    <p class="value" id="temperature">Loading...</p>
+                </div>
+                <div class="sensor">
+                    <h2 style="margin-left: 0px;">
+                        <img src="humidity.png" alt="hum icon" width="25" height="25" style="vertical-align: middle;">
+                        Humidity</h2>
+                    <p class="value" id="humidity">Loading...</p>
+                </div>
+            </div>
+
+            <div class="speedtime">
+                <div class="stdata">
+                    <h3 style="margin-right: 2px;">
+                        <img src="speedometer.png" alt="speed icon" width="25" height="25" style="vertical-align: middle;">
+                        Speed</h3>
+                    <p class="d" id="speed">Loading...</p>
+                </div>
+                <div class="stdata">
+                    <h3 style="margin-right: 2px;">
+                        <img src="time-left.png" alt="time icon" width="25" height="25" style="vertical-align: middle;">
+                        Flight Time</h3>
+                    <p class="d" id="time">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="compass">
+        <h4>Drone</h4>
+        <div class="compass-circle"></div>
+    </div>
+    
+
+    <div class="map-container">
+        <div class="datamap"></div>
+        <div id="map"></div>
+        <div class="waterlevel-container">
+            <h1>Water Level</h1>
+            <div class="levelc">
+                <div class="water-level" id="water-level"></div>
+            <div class="water-tip"></div>
+            <p class="water-status" id="water-status">Loading...</p>
+            <div class="water-tank">
+                <h1 img="Drone tank.png" alt="tank icon" width="75" height="75" style="vertical-align: middle;"></h1>
+            </div>
+            </div>
+
+            <div class="Button">
+                <button class="button">START</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet.js script -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- Firebase and JavaScript integration -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBRfzvsd3KLj9Ux-uOTPO8voAD3Q4yhhhc",
+            authDomain: "drone-data-233ef.firebaseapp.com",
+            databaseURL: "https://drone-data-233ef-default-rtdb.firebaseio.com",
+            projectId: "drone-data-233ef",
+            storageBucket: "drone-data-233ef.appspot.com",
+            messagingSenderId: "895060695821",
+            appId: "1:895060695821:web:98e9a092bb78620b206e44"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+        // Initialize Realtime Database and get a reference to the service
+        const database = getDatabase(app);
+
+        // Reference to your database
+        const onlineRef = ref(database, 'Online/Data');
+        const dhtRef = ref(database, 'DHT22/Data');
+        const locationRef = ref(database, 'Location/Data');
+        const batteryRef = ref(database, 'Battery/Data');
+        const speedRef = ref(database, 'Accelerometer/Data');
+        const waterRef = ref(database, 'Water level/Data');
+
+        //Online
+        onValue(onlineRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("Speed Data snapshot: ", data);
+
+            if (data) {
+                const speed = data.status !== undefined ? data.status : "No data";
+                document.getElementById('speed').innerHTML = onlinestatus ;
+            } else {
+                console.log("Online Data is null");
+                document.getElementById('online').innerHTML = "No data";
+            }
+        }, (error) => {
+            console.error("Error fetching online data: ", error);
+            document.getElementById('online').innerHTML = "Error";
+        });
+
+        // Listen for changes in the DHT22 data
+        onValue(dhtRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("DHT22 Data snapshot: ", data);
+
+            if (data) {
+                const humidity = data.Humidity !== undefined ? data.Humidity : "No data";
+                const temperature = data.Temperature !== undefined ? data.Temperature : "No data";
+
+                document.getElementById('humidity').innerHTML = humidity + "%";
+                document.getElementById('temperature').innerHTML = temperature + "&#8451;";
+            } else {
+                console.log("DHT22 Data is null");
+                document.getElementById('humidity').innerHTML = "No data";
+                document.getElementById('temperature').innerHTML = "No data";
+            }
+        }, (error) => {
+            console.error("Error fetching DHT22 data: ", error);
+            document.getElementById('humidity').innerHTML = "Error";
+            document.getElementById('temperature').innerHTML = "Error";
+        });
+
+        // Listen for changes in the Battery data
+        onValue(batteryRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("Battery Data snapshot: ", data);
+
+            if (snapshot.exists()) {
+                const batteryLevel = data.level !== undefined ? data.level : 0;
+                updateBatteryLevel(batteryLevel);
+            } else {
+                console.log("No battery data available");
+                updateBatteryLevel(0);
+            }
+        }, (error) => {
+            console.error("Error fetching battery data: ", error);
+            updateBatteryLevel(0);
+        });
+
+        function updateBatteryLevel(level) {
+            const batteryLevel = document.getElementById('battery-level');
+            batteryLevel.style.width = level + '%';
+            const batteryStatus = document.getElementById('battery-status');
+            batteryStatus.textContent = level + '%';
+
+            if (level > 50) {
+                batteryLevel.style.backgroundColor = '#039f34';
+            } else if (level > 20) {
+                batteryLevel.style.backgroundColor = '#f9c74f';
+            } else {
+                batteryLevel.style.backgroundColor = '#f94144';
+            }
+        }
+
+        // Listen for changes in the Speed data
+        onValue(speedRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("Speed Data snapshot: ", data);
+
+            if (data) {
+                const speed = data.Speed !== undefined ? data.Speed : "No data";
+                document.getElementById('speed').innerHTML = speed + " m/s";
+            } else {
+                console.log("Speed Data is null");
+                document.getElementById('speed').innerHTML = "No data";
+            }
+        }, (error) => {
+            console.error("Error fetching speed data: ", error);
+            document.getElementById('speed').innerHTML = "Error";
+        });
+
+        // Initialize the map
+        const map = L.map('map').setView([0, 0], 2);
+
+        // Add a tile layer to the map
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Marker for the location
+        let marker = L.marker([0, 0]).addTo(map);
+
+        // Listen for changes in the Location data
+        onValue(locationRef, (snapshot) => {
+            const locationData = snapshot.val();
+            console.log("Location Data snapshot: ", locationData);
+
+            if (locationData) {
+                const latitude = locationData.Lattitude !== undefined ? locationData.Lattitude : null;
+                const longitude = locationData.Longitude !== undefined ? locationData.Longitude : null;
+
+                if (latitude !== null && longitude !== null) {
+                    console.log("Setting map view to: ", latitude, longitude);
+                    const latLng = [latitude, longitude];
+                    map.setView(latLng, 13);
+                    marker.setLatLng(latLng);
+                } else {
+                    console.log("Location data is incomplete: ", locationData);
+                }
+            } else {
+                console.log("Location data is null");
+            }
+        }, (error) => {
+            console.error("Error fetching location data: ", error);
+        });
+
+        const compassCircle = document.querySelector(".compass-circle");
+        const startBtn = document.querySelector(".start-btn");
+
+        function startCompass() {
+            // Implement your compass logic here
+        }
+        startBtn.addEventListener("click", startCompass);
+
+        // Water level
+        onValue(waterRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("Water Data snapshot: ", data);
+
+            if (snapshot.exists()) {
+                const waterLevel = data.level !== undefined ? data.level : 0;
+                updateWaterLevel(waterLevel);
+            } else {
+                console.log("No water data available");
+                updateWaterLevel(0);
+            }
+        }, (error) => {
+            console.error("Error fetching water data: ", error);
+            updateWaterLevel(0);
+        });
+
+        function updateWaterLevel(level) {
+            const waterLevelElement = document.getElementById('water-level');
+            const waterStatusElement = document.getElementById('water-status');
+
+            waterLevelElement.style.width = level + '%';
+            waterStatusElement.textContent = level + '%';
+
+            if (level > 50) {
+                waterLevelElement.style.backgroundColor = '#0055ff';
+            } else if (level > 20) {
+                waterLevelElement.style.backgroundColor = '#f9c74f';
+            } else {
+                waterLevelElement.style.backgroundColor = '#f94144';
+            }
+        }
+    </script>
+</body>
+</html>
